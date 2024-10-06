@@ -1,5 +1,5 @@
 {
-	"name": "misoftteam/raklib",
+	"name": "multimcpe/raklib",
 	"description": "A RakNet server implementation written in PHP",
 	"type": "library",
 	"license": "GPL-3.0",
@@ -10,9 +10,9 @@
 		"ext-bcmath": "*",
 		"ext-pthreads": ">=4.2.2",
 		"ext-sockets": "*",
-		"misoftteam/spl": "^0.3.0",
-		"misoftteam/binaryutils": "^0.1.9",
-		"misoftteam/snooze": "^0.1.0"
+		"multimcpe/spl": "^0.3.0",
+		"multimcpe/binaryutils": "^0.1.9",
+		"multimcpe/snooze": "^0.1.0"
 	},
 	"autoload": {
 		"psr-4": {
