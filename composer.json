@@ -8,7 +8,7 @@
 		"php-ipv6": "*",
 		"php-64bit": "*",
 		"ext-bcmath": "*",
-		"ext-pthreads": "~3.2.0",
+		"ext-pthreads": ">=4.2.2",
 		"ext-sockets": "*",
 		"pocketmine/spl": "^0.3.0",
 		"pocketmine/binaryutils": "^0.1.9",
