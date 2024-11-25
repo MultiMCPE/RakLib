@@ -8,7 +8,6 @@
 		"php-ipv6": "*",
 		"php-64bit": "*",
 		"ext-bcmath": "*",
-		"ext-pthreads": ">=4.2.2",
 		"ext-sockets": "*",
 		"multimcpe/spl": "^0.3.0",
 		"multimcpe/binaryutils": "^0.1.9",
