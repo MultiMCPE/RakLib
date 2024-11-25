@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace raklib\server;
 
 use InvalidArgumentException;
+use pocketmine\thread\log\ThreadSafeLogger;
 use raklib\protocol\ACK;
 use raklib\protocol\AdvertiseSystem;
 use raklib\protocol\Datagram;
@@ -35,9 +36,7 @@ use raklib\protocol\UnconnectedPong;
 use raklib\RakLib;
 use raklib\utils\InternetAddress;
 use SplFixedArray;
-use ThreadedLogger;
 use Throwable;
-use Volatile;
 use function asort;
 use function bin2hex;
 use function chr;
@@ -147,11 +146,11 @@ class SessionManager{
 		return $this->maxMtuSize;
 	}
 
-	public function getProtocolVersions() : Volatile{
+	public function getProtocolVersions() : array{
 		return $this->server->getProtocolVersions();
 	}
 
-	public function getLogger() : ThreadedLogger{
+	public function getLogger() : ThreadSafeLogger{
 		return $this->server->getLogger();
 	}
 
@@ -239,6 +238,8 @@ class SessionManager{
 			if($error === SOCKET_EWOULDBLOCK){ //no data
 				return false;
 			}elseif($error === SOCKET_ECONNRESET){ //client disconnected improperly, maybe crash or lost connection
+				return true;
+			}elseif($error === 10054){
 				return true;
 			}
 

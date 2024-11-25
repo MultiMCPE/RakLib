@@ -34,25 +34,12 @@ if(version_compare(RakLib::MIN_PHP_VERSION, PHP_VERSION) > 0){
 
 $exts = [
 	"bcmath" => "BC Math",
-	"pthreads" => "pthreads",
 	"sockets" => "Sockets"
 ];
 
 foreach($exts as $ext => $name){
 	if(!extension_loaded($ext)){
 		echo "[CRITICAL] Unable to find the $name ($ext) extension." . PHP_EOL;
-		++$errors;
-	}
-}
-
-if(extension_loaded("pthreads")){
-	$pthreads_version = phpversion("pthreads");
-	if(substr_count($pthreads_version, ".") < 2){
-		$pthreads_version = "0.$pthreads_version";
-	}
-
-	if(version_compare($pthreads_version, "3.1.7dev") < 0){
-		echo "[CRITICAL] pthreads >= 3.1.7dev is required, while you have $pthreads_version.";
 		++$errors;
 	}
 }
@@ -70,7 +57,7 @@ unset($errors, $exts);
 abstract class RakLib{
 	public const VERSION = "0.12.0";
 
-	public const MIN_PHP_VERSION = "7.2.0";
+	public const MIN_PHP_VERSION = "8.2.0";
 
 	/**
 	 * Default vanilla Raknet protocol version that this library implements. Things using RakNet can override this

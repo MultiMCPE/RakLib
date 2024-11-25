@@ -20,13 +20,15 @@ namespace raklib\server;
 use Exception;
 use Phar;
 use pocketmine\snooze\SleeperNotifier;
+use pocketmine\thread\log\ThreadSafeLogger;
+use pocketmine\thread\NonThreadSafeValue;
+use pocketmine\thread\Thread;
+use pmmp\thread\ThreadSafeArray;
+use pocketmine\thread\ThreadSafeClassLoader;
 use raklib\RakLib;
 use raklib\utils\InternetAddress;
-use Thread;
-use Threaded;
-use ThreadedLogger;
 use Throwable;
-use Volatile;
+use GlobalLogger;
 use function array_reverse;
 use function count;
 use function error_get_last;
@@ -69,21 +71,21 @@ use const E_WARNING;
 use const PHP_INT_MAX;
 
 class RakLibServer extends Thread{
-	/** @var InternetAddress */
+	/** @phpstan-var NonThreadSafeValue<InternetAddress> */
 	private $address;
 
 	/** @var ThreadedLogger */
 	protected $logger;
 
-	/** @var string */
-	protected $loaderPath;
+	/** @var ThreadSafeClassLoader */
+	protected $classLoader;
 
 	/** @var bool */
 	protected $shutdown = false;
 
-	/** @var Threaded */
+	/** @var ThreadSafeArray */
 	protected $externalQueue;
-	/** @var Threaded */
+	/** @var ThreadSafeArray */
 	protected $internalQueue;
 
 	/** @var string */
@@ -93,31 +95,31 @@ class RakLibServer extends Thread{
 	protected $serverId = 0;
 	/** @var int */
 	protected $maxMtuSize;
-	/** @var Volatile|int[] */
+	/** @phpstan-var NonThreadSafeValue<array> */
 	private $protocolVersions;
 
 	/** @var SleeperNotifier */
 	protected $mainThreadNotifier;
 
 	/**
-	 * @param ThreadedLogger       $logger
-	 * @param string               $autoloaderPath Path to Composer autoloader
-	 * @param InternetAddress      $address
-	 * @param int                  $maxMtuSize
-	 * @param int[]                $protocolVersions
-	 * @param SleeperNotifier|null $sleeper
+	 * @param ThreadSafeLogger      $logger
+	 * @param ThreadSafeClassLoader $classLoader
+	 * @param InternetAddress       $address
+	 * @param int                   $maxMtuSize
+	 * @param int[]                 $protocolVersions
+	 * @param SleeperNotifier|null  $sleeper
 	 */
-	public function __construct(ThreadedLogger $logger, string $autoloaderPath, InternetAddress $address, int $maxMtuSize = 1492, $protocolVersions = [], ?SleeperNotifier $sleeper = null){
-		$this->address = $address;
+	public function __construct(ThreadSafeLogger $logger, ThreadSafeClassLoader $classLoader, InternetAddress $address, int $maxMtuSize = 1492, $protocolVersions = [], ?SleeperNotifier $sleeper = null){
+		$this->address = new NonThreadSafeValue($address);
 
 		$this->serverId = mt_rand(0, PHP_INT_MAX);
 		$this->maxMtuSize = $maxMtuSize;
 
 		$this->logger = $logger;
-		$this->loaderPath = $autoloaderPath;
+		$this->classLoader = $classLoader;
 
-		$this->externalQueue = new Threaded;
-		$this->internalQueue = new Threaded;
+		$this->externalQueue = new ThreadSafeArray;
+		$this->internalQueue = new ThreadSafeArray;
 
 		if(Phar::running(true) !== ""){
 			$this->mainPath = Phar::running(true);
@@ -125,7 +127,7 @@ class RakLibServer extends Thread{
 			$this->mainPath = realpath(getcwd()) . DIRECTORY_SEPARATOR;
 		}
 
-		$this->protocolVersions = count($protocolVersions) === 0 ? [RakLib::DEFAULT_PROTOCOL_VERSION] : $protocolVersions;
+		$this->protocolVersions = new NonThreadSafeValue(count($protocolVersions) === 0 ? [RakLib::DEFAULT_PROTOCOL_VERSION] : $protocolVersions);
 
 		$this->mainThreadNotifier = $sleeper;
 	}
@@ -146,28 +148,28 @@ class RakLibServer extends Thread{
 		return $this->serverId;
 	}
 
-	public function getProtocolVersions() : Volatile{
-		return $this->protocolVersions;
+	public function getProtocolVersions() : array{
+		return $this->protocolVersions->deserialize();
 	}
 
 	/**
-	 * @return ThreadedLogger
+	 * @return ThreadSafeLogger
 	 */
-	public function getLogger() : ThreadedLogger{
+	public function getLogger() : ThreadSafeLogger{
 		return $this->logger;
 	}
 
 	/**
-	 * @return Threaded
+	 * @return ThreadSafeArray
 	 */
-	public function getExternalQueue() : Threaded{
+	public function getExternalQueue() : ThreadSafeArray{
 		return $this->externalQueue;
 	}
 
 	/**
-	 * @return Threaded
+	 * @return ThreadSafeArray
 	 */
-	public function getInternalQueue() : Threaded{
+	public function getInternalQueue() : ThreadSafeArray{
 		return $this->internalQueue;
 	}
 
@@ -272,24 +274,25 @@ class RakLibServer extends Thread{
 		return str_replace(["\\", ".php", "phar://", str_replace(["\\", "phar://"], ["/", ""], $this->mainPath)], ["/", "", "", ""], $path);
 	}
 
-	public function run() : void{
-		try{
-			require $this->loaderPath;
+	public function onRun() : void{
+		//try{
+		    $this->setClassLoader($this->classLoader);
 
 			gc_enable();
 			error_reporting(-1);
 			ini_set("display_errors", '1');
 			ini_set("display_startup_errors", '1');
+			GlobalLogger::set($this->logger);
 
 			set_error_handler([$this, "errorHandler"], E_ALL);
 			register_shutdown_function([$this, "shutdownHandler"]);
 
 
-			$socket = new UDPServerSocket($this->address);
+			$socket = new UDPServerSocket($this->address->deserialize());
 			new SessionManager($this, $socket, $this->maxMtuSize);
-		}catch(Throwable $e){
-			$this->logger->logException($e);
-		}
+		//}catch(Throwable $e){
+			//$this->logger->logException($e);
+		//}
 	}
 
 }
